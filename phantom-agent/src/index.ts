@@ -1,33 +1,58 @@
 import { Config } from './config.js';
-import { createBot, disconnect } from './minecraft/BotManager.js';
 import { createEmpty } from './worldstate/WorldState.js';
-import { perceive } from './agents/PerceptionAgent.js';
+import { GeminiClient } from './llm/GeminiClient.js';
+import { PlanningAgent } from './agents/PlanningAgent.js';
+import { ExecutionAgent } from './agents/ExecutionAgent.js';
+import { CriticAgent } from './agents/CriticAgent.js';
+import { MemoryAgent } from './agents/MemoryAgent.js';
+import { Orchestrator } from './orchestrator/Orchestrator.js';
 
 console.log('Phantom Agent starting...');
 
-const bot = createBot(Config);
+if (!Config.geminiApiKey) {
+  console.error('[Config] GEMINI_API_KEY is not set — add it to .env before running.');
+  process.exit(1);
+}
+
 const worldState = createEmpty();
 
-bot.once('spawn', () => {
-  console.log(`[Bot] Spawned as ${bot.username} at`, bot.entity.position);
+const gemini       = new GeminiClient(Config.geminiApiKey);
+const planningAgent  = new PlanningAgent(gemini);
+const executionAgent = new ExecutionAgent();
+const criticAgent    = new CriticAgent();
+const memoryAgent    = new MemoryAgent();
 
-  // Wait for health + chunk packets to arrive before snapshotting
-  setTimeout(() => {
-  perceive(bot, worldState);
+const orchestrator = new Orchestrator(
+  Config,
+  planningAgent,
+  executionAgent,
+  criticAgent,
+  memoryAgent,
+  worldState,
+);
 
-  console.log('\n--- WorldState Snapshot ---');
-  console.log('Bot:', worldState.bot);
-  console.log('Inventory:', worldState.inventory);
-  console.log('Nearby blocks:', worldState.world.nearbyBlocks.slice(0, 5));
-  console.log('Nearby entities:', worldState.world.nearbyEntities.slice(0, 5));
-  console.log('Time of day:', worldState.world.timeOfDay);
-  console.log('Is raining:', worldState.world.isRaining);
-  console.log('Events:', worldState.events);
-  }, 3000);
+orchestrator.on('PLAN_READY', (plan) => {
+  console.log(`[Orchestrator] Plan ready — ${plan.length} subtasks:`);
+  for (const subtask of plan) {
+    console.log(`  [${subtask.id}] ${subtask.action_type}: ${subtask.description ?? JSON.stringify(subtask.parameters)}`);
+  }
+});
+
+orchestrator.on('SUBTASK_COMPLETE', (subtask) => {
+  console.log(`[Orchestrator] ✓ [${subtask.id}] ${subtask.action_type}`);
+});
+
+orchestrator.on('SESSION_COMPLETE', () => {
+  console.log('[Orchestrator] Session complete.');
+  console.log('Final inventory:', worldState.inventory);
 });
 
 process.on('SIGINT', () => {
   console.log('\n[Bot] Shutting down...');
-  disconnect(bot);
-  setTimeout(() => process.exit(0), 1000);
+  setTimeout(() => process.exit(0), 500);
+});
+
+orchestrator.run('chop 3 oak logs and craft oak planks').catch((err: Error) => {
+  console.error('[Orchestrator] Fatal error:', err.message);
+  process.exit(1);
 });
