@@ -8,7 +8,7 @@ export function createBot(config: AppConfig): Bot {
     host: config.mcHost,
     port: config.mcPort,
     username: config.mcUsername,
-    version: '1.21.1',
+    version: '1.21.11',
   });
 
   bot.loadPlugin(pathfinder);
