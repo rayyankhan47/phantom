@@ -1,3 +1,21 @@
 project_details.md
 project_plan.md
 CLAUDE.md
+
+# Node
+node_modules/
+dist/
+out/
+*.log
+
+# Environment
+.env
+
+# Java / Gradle
+build/
+.gradle/
+run/
+
+# IDEs
+.idea/
+.vscode/
