@@ -19,3 +19,26 @@ run/
 # IDEs
 .idea/
 .vscode/
+
+# PaperMC server runtime (keep only start.sh and eula.txt)
+server/paper.jar
+server/cache/
+server/config/
+server/libraries/
+server/plugins/
+server/versions/
+server/world/
+server/world_nether/
+server/world_the_end/
+server/banned-ips.json
+server/banned-players.json
+server/bukkit.yml
+server/commands.yml
+server/help.yml
+server/ops.json
+server/permissions.yml
+server/server.properties
+server/spigot.yml
+server/usercache.json
+server/version_history.json
+server/whitelist.json
